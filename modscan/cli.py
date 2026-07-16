@@ -25,6 +25,9 @@ import argparse
 import os
 import sys
 
+import json
+
+from modscan.diff import diff_manifests, render_diff_markdown
 from modscan.docgen import generate_docs
 from modscan.providers import Provider, get_provider
 from modscan.scaffold import scaffold
@@ -94,6 +97,32 @@ def _main_scaffold(argv: list[str]) -> int:
     return 0
 
 
+def build_diff_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="modscan diff",
+        description="Diff two extension-points.json manifests and report breaking "
+        "changes. Exits 1 if breaking changes are found (for CI gates).",
+    )
+    parser.add_argument("old", help="path to the previous extension-points.json")
+    parser.add_argument("new", help="path to the current extension-points.json")
+    return parser
+
+
+def _main_diff(argv: list[str]) -> int:
+    args = build_diff_parser().parse_args(argv)
+    for path in (args.old, args.new):
+        if not os.path.isfile(path):
+            print(f"error: manifest not found: {path}", file=sys.stderr)
+            return 2
+    with open(args.old, encoding="utf-8") as fh:
+        old = json.load(fh)
+    with open(args.new, encoding="utf-8") as fh:
+        new = json.load(fh)
+    diff = diff_manifests(old, new)
+    print(render_diff_markdown(diff))
+    return 1 if diff.breaking else 0
+
+
 def run(args: argparse.Namespace, provider: Provider) -> int:
     """Run the pipeline with an already-constructed provider. Returns exit code."""
     report = generate_docs(
@@ -120,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "scaffold":
         return _main_scaffold(argv[1:])
+    if argv and argv[0] == "diff":
+        return _main_diff(argv[1:])
 
     args = build_parser().parse_args(argv)
 

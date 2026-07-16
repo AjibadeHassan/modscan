@@ -127,6 +127,13 @@ modscan scaffold "pkg.mod:Symbol" --manifest modding-docs/extension-points.json
 # -> writes pkg_mod_Symbol_plugin.py: a concrete subclass with stubbed methods
 ```
 
+Diff two manifests to catch breaking changes when the target app updates (exits
+non-zero on breaking changes — handy as a CI gate):
+
+```bash
+modscan diff old/extension-points.json new/extension-points.json
+```
+
 > **Trust note:** by default MODScan imports and executes code under the scanned
 > path (and runs generated examples) to validate that plugins really load. Run it
 > only on code you trust, or pass `--no-validate-examples`.

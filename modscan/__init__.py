@@ -30,6 +30,7 @@ from modscan.factblocks import FactBlock, build_fact_block, render_fact_block
 from modscan.providers import DEFAULT_MODEL, FakeProvider, Provider, get_provider
 from modscan.docgen import DocReport, GeneratedPoint, generate_docs
 from modscan.scaffold import render_scaffold, scaffold
+from modscan.diff import ManifestDiff, PointChange, diff_manifests, render_diff_markdown
 
 __all__ = [
     "Codebase",
@@ -60,4 +61,8 @@ __all__ = [
     "generate_docs",
     "scaffold",
     "render_scaffold",
+    "ManifestDiff",
+    "PointChange",
+    "diff_manifests",
+    "render_diff_markdown",
 ]
