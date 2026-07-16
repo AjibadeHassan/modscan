@@ -27,6 +27,7 @@ import sys
 
 from modscan.docgen import generate_docs
 from modscan.providers import Provider, get_provider
+from modscan.scaffold import scaffold
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +64,36 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_scaffold_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="modscan scaffold",
+        description="Generate a plugin skeleton for an extension point id, "
+        "using a previously generated extension-points.json manifest.",
+    )
+    parser.add_argument("point_id", help="extension point id, e.g. 'pkg.mod:Symbol'")
+    parser.add_argument(
+        "--manifest",
+        default=os.path.join("modding-docs", "extension-points.json"),
+        help="path to extension-points.json (default: modding-docs/extension-points.json)",
+    )
+    parser.add_argument("--out", default=".", help="output directory (default: .)")
+    return parser
+
+
+def _main_scaffold(argv: list[str]) -> int:
+    args = build_scaffold_parser().parse_args(argv)
+    if not os.path.isfile(args.manifest):
+        print(f"error: manifest not found: {args.manifest}", file=sys.stderr)
+        return 2
+    try:
+        path = scaffold(args.manifest, args.point_id, args.out)
+    except ValueError as exc:  # point id not found — message lists valid ids
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(f"Wrote plugin skeleton: {path}")
+    return 0
+
+
 def run(args: argparse.Namespace, provider: Provider) -> int:
     """Run the pipeline with an already-constructed provider. Returns exit code."""
     report = generate_docs(
@@ -86,6 +117,10 @@ def run(args: argparse.Namespace, provider: Provider) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "scaffold":
+        return _main_scaffold(argv[1:])
+
     args = build_parser().parse_args(argv)
 
     if not os.path.isdir(args.root):

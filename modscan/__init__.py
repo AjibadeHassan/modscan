@@ -29,6 +29,7 @@ from modscan.validator import ValidationResult, validate_point, validate_points
 from modscan.factblocks import FactBlock, build_fact_block, render_fact_block
 from modscan.providers import DEFAULT_MODEL, FakeProvider, Provider, get_provider
 from modscan.docgen import DocReport, GeneratedPoint, generate_docs
+from modscan.scaffold import render_scaffold, scaffold
 
 __all__ = [
     "Codebase",
@@ -57,4 +58,6 @@ __all__ = [
     "DocReport",
     "GeneratedPoint",
     "generate_docs",
+    "scaffold",
+    "render_scaffold",
 ]

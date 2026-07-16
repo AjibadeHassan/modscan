@@ -96,8 +96,9 @@ ones that can't be validated are clearly marked `unverified`.
 3. ✅ Validator — load a real example plugin against a detected seam
 4. ✅ Doc generator (LLM, grounded) — Markdown + JSON manifest
 5. ✅ `modscan ./path` CLI wrapper, end to end
-6. Later: `modscan scaffold <id>` (consumes the JSON), more languages (JS/TS),
-   web UI, and — only with proper legal guardrails — the binary case
+6. ✅ `modscan scaffold <id>` — generate a plugin skeleton from the JSON manifest
+7. Later: more languages (JS/TS), web UI, and — only with proper legal
+   guardrails — the binary case
 
 ## Usage
 
@@ -116,6 +117,14 @@ Common flags:
 modscan ./proj --provider openai --model gpt-x --base-url http://localhost:11434/v1
 modscan ./proj --min-score 0.6 --limit 20 --retries 5
 modscan ./proj --no-validate-examples   # skip importing/executing target code
+```
+
+Then scaffold a ready-to-edit plugin from any documented extension point (no LLM,
+reads the JSON manifest):
+
+```bash
+modscan scaffold "pkg.mod:Symbol" --manifest modding-docs/extension-points.json
+# -> writes pkg_mod_Symbol_plugin.py: a concrete subclass with stubbed methods
 ```
 
 > **Trust note:** by default MODScan imports and executes code under the scanned
