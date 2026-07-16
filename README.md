@@ -137,6 +137,11 @@ non-zero on breaking changes — handy as a CI gate):
 modscan diff old/extension-points.json new/extension-points.json
 ```
 
+To gate pull requests automatically, copy
+[`examples/ci/breaking-change.yml`](examples/ci/breaking-change.yml) into your
+project: it diffs the committed manifest against the PR's base branch, comments
+the result on the PR, and fails the check on breaking changes. No API key needed.
+
 > **Trust note:** by default MODScan imports and executes code under the scanned
 > path (and runs generated examples) to validate that plugins really load. Run it
 > only on code you trust, or pass `--no-validate-examples`.
