@@ -20,5 +20,12 @@ from modscan.providers.base import (
     Provider,
     get_provider,
 )
+from modscan.providers.cache import CachingProvider
 
-__all__ = ["Provider", "FakeProvider", "get_provider", "DEFAULT_MODEL"]
+__all__ = [
+    "Provider",
+    "FakeProvider",
+    "get_provider",
+    "DEFAULT_MODEL",
+    "CachingProvider",
+]

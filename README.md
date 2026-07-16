@@ -132,6 +132,7 @@ modscan ./proj --min-score 0.6 --limit 20 --retries 5
 modscan ./proj --language typescript     # scan a TS/JS codebase (static docs)
 modscan ./proj --no-validate-examples   # skip importing/executing target code
 modscan ./proj --sandbox                 # validate examples in an isolated subprocess
+modscan ./proj --cache-dir .modscan-cache  # cache LLM responses for cheap re-runs
 ```
 
 Then scaffold a ready-to-edit plugin from any documented extension point (no LLM,
