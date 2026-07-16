@@ -92,7 +92,42 @@ def test_ts_parses_into_seams() -> int:
     return 0
 
 
+def test_generate_docs_typescript() -> int:
+    """generate_docs(language='typescript') produces static docs (no execution)."""
+    if not _HAVE_TS:
+        print("SKIP: typescript docgen (pip install modscan[typescript] to run)")
+        return 0
+
+    import json
+
+    from modscan.docgen import generate_docs
+    from modscan.providers import FakeProvider
+
+    with tempfile.TemporaryDirectory() as root:
+        with open(os.path.join(root, "plugin.ts"), "w", encoding="utf-8") as fh:
+            fh.write(TS_SRC)
+        out = os.path.join(root, "modding-docs")
+        provider = FakeProvider(
+            lambda s, p: "class MyMod extends BaseMod {}" if "EXAMPLE" in p else "prose"
+        )
+        report = generate_docs(root, provider, out, min_score=0.4, language="typescript")
+
+        assert report.points, "expected TS extension points documented"
+        # non-executing language -> examples are 'generated', never validated
+        assert all(p.example_status == "generated" for p in report.points)
+        # examples written with a .ts extension
+        assert all(p.example_path.endswith(".ts") for p in report.points)
+        assert os.path.isfile(os.path.join(out, "extension-points.json"))
+
+        with open(os.path.join(out, "extension-points.json"), encoding="utf-8") as fh:
+            manifest = json.load(fh)
+        ids = {pt["id"] for pt in manifest["points"]}
+        assert any("RenderPlugin" in i for i in ids)
+    return 0
+
+
 if __name__ == "__main__":
     test_ts_and_js_registered()
     test_ts_parses_into_seams()
+    test_generate_docs_typescript()
     print("OK: typescript self-check passed")

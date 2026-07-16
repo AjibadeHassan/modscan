@@ -44,9 +44,13 @@ _HOOK_NAME_PARTS = (
     "connect", "emit", "dispatch", "plugin", "extend", "handler", "callback",
 )
 # Class-name suffixes that signal a role meant to be implemented/subclassed.
+# Includes common JS/TS role suffixes (Component, Service, ...) alongside the
+# language-agnostic ones.
 _CLASS_ROLE_SUFFIXES = (
     "Plugin", "Hook", "Extension", "Handler", "Listener", "Middleware",
     "Backend", "Provider", "Adapter", "Driver", "Strategy", "Base",
+    "Component", "Service", "Controller", "Module", "Directive", "Store",
+    "Reducer",
 )
 # Decorator names that look like registration.
 _REGISTRATION_DECORATOR_PARTS = (

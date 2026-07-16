@@ -41,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("root", help="path to the source-available codebase to scan")
     parser.add_argument(
+        "--language",
+        default="python",
+        help="source language: python (default) | typescript | javascript",
+    )
+    parser.add_argument(
         "--out", default="modding-docs", help="output directory (default: modding-docs)"
     )
     parser.add_argument(
@@ -151,6 +156,7 @@ def run(args: argparse.Namespace, provider: Provider) -> int:
         max_example_retries=args.retries,
         validate_examples=not args.no_validate_examples,
         sandbox=args.sandbox,
+        language=args.language,
     )
     verified = report.verified_count
     total = len(report.points)
@@ -176,7 +182,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: not a directory: {args.root}", file=sys.stderr)
         return 2
 
-    if not args.no_validate_examples:
+    # Only the Python front-end imports/executes target code to validate examples.
+    if args.language == "python" and not args.no_validate_examples:
         print(
             "warning: MODScan will IMPORT and EXECUTE code under "
             f"'{args.root}' to validate examples. Run only on code you trust "

@@ -197,6 +197,7 @@ def _parse_file(path: str, root: str, parser) -> ModuleInfo:
 class TypeScriptLanguageParser:
     name = "typescript"
     extensions = _ALL_EXTS
+    validates = False  # no in-process JS/TS execution; docs are static-only
 
     def parse_codebase(self, root: str) -> Codebase:
         ts_parser, tsx_parser = _load_parsers()
@@ -219,4 +220,10 @@ class TypeScriptLanguageParser:
 _parser = TypeScriptLanguageParser()
 register_language(_parser)
 # JavaScript uses the same front-end (the TS grammar is a superset).
-register_language(type("_JsAlias", (), {"name": "javascript", "parse_codebase": _parser.parse_codebase})())
+register_language(
+    type(
+        "_JsAlias",
+        (),
+        {"name": "javascript", "validates": False, "parse_codebase": _parser.parse_codebase},
+    )()
+)
