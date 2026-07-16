@@ -46,10 +46,16 @@ def _is_public(name: str) -> bool:
 
 
 def _first_string_arg(call: ast.Call) -> str | None:
-    for arg in call.args:
-        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-            return arg.value
+    """Return the first positional arg if it is a string literal, else None.
+
+    A constant string means the import target is statically known; anything else
+    (a variable, expression) means it is resolved at runtime.
+    """
+    if not call.args:
         return None
+    first = call.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        return first.value
     return None
 
 
