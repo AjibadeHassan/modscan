@@ -30,6 +30,12 @@ from modscan.factblocks import FactBlock, build_fact_block, render_fact_block
 from modscan.providers import DEFAULT_MODEL, FakeProvider, Provider, get_provider
 from modscan.docgen import DocReport, GeneratedPoint, generate_docs
 from modscan.scaffold import render_scaffold, scaffold
+from modscan.languages import (
+    LanguageParser,
+    available_languages,
+    get_language_parser,
+    register_language,
+)
 
 __all__ = [
     "Codebase",
@@ -60,4 +66,8 @@ __all__ = [
     "generate_docs",
     "scaffold",
     "render_scaffold",
+    "LanguageParser",
+    "available_languages",
+    "get_language_parser",
+    "register_language",
 ]
