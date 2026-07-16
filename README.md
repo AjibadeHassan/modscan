@@ -117,6 +117,7 @@ Common flags:
 modscan ./proj --provider openai --model gpt-x --base-url http://localhost:11434/v1
 modscan ./proj --min-score 0.6 --limit 20 --retries 5
 modscan ./proj --no-validate-examples   # skip importing/executing target code
+modscan ./proj --cache-dir .modscan-cache  # cache LLM responses for cheap re-runs
 ```
 
 Then scaffold a ready-to-edit plugin from any documented extension point (no LLM,

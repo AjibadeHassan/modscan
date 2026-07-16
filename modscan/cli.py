@@ -26,7 +26,7 @@ import os
 import sys
 
 from modscan.docgen import generate_docs
-from modscan.providers import Provider, get_provider
+from modscan.providers import CachingProvider, Provider, get_provider
 from modscan.scaffold import scaffold
 
 
@@ -60,6 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-validate-examples",
         action="store_true",
         help="skip executing generated examples (no import/exec of target code)",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        default=None,
+        help="cache LLM responses in this directory (cheap, offline re-runs)",
     )
     return parser
 
@@ -137,6 +142,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         provider = get_provider(args.provider, model=args.model, base_url=args.base_url)
+        if args.cache_dir:
+            provider = CachingProvider(provider, args.cache_dir)
         return run(args, provider)
     except Exception as exc:  # noqa: BLE001 — top-level CLI guard, report cleanly
         print(f"error: {exc}", file=sys.stderr)
