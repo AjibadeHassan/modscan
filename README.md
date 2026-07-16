@@ -95,17 +95,32 @@ ones that can't be validated are clearly marked `unverified`.
 2. ✅ Extension detector + moddability ranking
 3. ✅ Validator — load a real example plugin against a detected seam
 4. ✅ Doc generator (LLM, grounded) — Markdown + JSON manifest
-5. `modscan ./path` CLI wrapper, end to end — **next**
+5. ✅ `modscan ./path` CLI wrapper, end to end
 6. Later: `modscan scaffold <id>` (consumes the JSON), more languages (JS/TS),
    web UI, and — only with proper legal guardrails — the binary case
 
-## Usage (planned)
+## Usage
 
 ```bash
+pip install -e .[anthropic]        # or .[openai]
+export ANTHROPIC_API_KEY=sk-...    # keys come from the environment, never flags
+
 modscan ./path/to/project
-# -> writes modding-docs/ : architecture overview, extension-point map,
-#    plugin guide, and a validated example plugin
+# -> writes modding-docs/: index.md, plugin-guide.md, examples/*.py,
+#    and extension-points.json
 ```
+
+Common flags:
+
+```bash
+modscan ./proj --provider openai --model gpt-x --base-url http://localhost:11434/v1
+modscan ./proj --min-score 0.6 --limit 20 --retries 5
+modscan ./proj --no-validate-examples   # skip importing/executing target code
+```
+
+> **Trust note:** by default MODScan imports and executes code under the scanned
+> path (and runs generated examples) to validate that plugins really load. Run it
+> only on code you trust, or pass `--no-validate-examples`.
 
 ## License
 
