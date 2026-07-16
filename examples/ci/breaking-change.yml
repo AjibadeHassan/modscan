@@ -1,0 +1,63 @@
+# MODScan mod-compatibility gate — copy this into a downstream project that uses
+# MODScan to protect its plugin/mod authors from silent breaking changes.
+#
+# It compares the project's committed extension-points.json against the version
+# on the PR's base branch and comments the diff on the PR, failing the check if
+# any extension point was removed or its contract changed.
+#
+# Prerequisites in the consuming repo:
+#   * commit your manifest (e.g. modding-docs/extension-points.json) and keep it
+#     up to date — regenerate with `modscan <path>` and commit the result;
+#   * set MANIFEST below to that path.
+#
+# This uses `modscan diff` only (no LLM / API key needed).
+
+name: Mod compatibility
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  extension-point-diff:
+    runs-on: ubuntu-latest
+    env:
+      MANIFEST: modding-docs/extension-points.json # <-- adjust to your path
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the base branch to diff against
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install modscan
+
+      - name: Get base-branch manifest
+        run: |
+          git show "origin/${{ github.base_ref }}:$MANIFEST" > /tmp/old.json \
+            || echo '{"points":[]}' > /tmp/old.json
+
+      - name: Diff extension points
+        id: diff
+        run: |
+          set +e
+          modscan diff /tmp/old.json "$MANIFEST" > /tmp/diff.md
+          echo "breaking=$?" >> "$GITHUB_OUTPUT"
+          cat /tmp/diff.md
+
+      - name: Comment diff on PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file /tmp/diff.md
+
+      - name: Fail on breaking changes
+        if: steps.diff.outputs.breaking == '1'
+        run: |
+          echo "Breaking changes to extension points — mods may break." >&2
+          exit 1
