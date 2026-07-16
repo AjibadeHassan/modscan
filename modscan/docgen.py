@@ -43,6 +43,7 @@ from typing import Iterator
 from modscan.detector import detect_extension_points
 from modscan.factblocks import FactBlock, build_fact_block, render_fact_block
 from modscan.graph import build_graph
+from modscan.languages import get_language_parser
 from modscan.manifest import build_manifest, write_manifest
 from modscan.parser import parse_codebase
 from modscan.prompts import SYSTEM, architecture_prompt, example_prompt, guide_prompt
@@ -156,9 +157,13 @@ def _dependency_summary(dependencies: dict[str, set[str]]) -> str:
     return f"{len(dependencies)} internal modules, {edges} dependency edges"
 
 
-def _example_filename(point_id: str) -> str:
+def _example_filename(point_id: str, ext: str) -> str:
     safe = "".join(c if c.isalnum() else "_" for c in point_id)
-    return f"{safe}.py"
+    return f"{safe}{ext}"
+
+
+def _example_ext(language: str) -> str:
+    return ".py" if language == "python" else ".ts"
 
 
 def generate_docs(
@@ -170,19 +175,32 @@ def generate_docs(
     limit: int | None = None,
     max_example_retries: int = _DEFAULT_RETRIES,
     validate_examples: bool = True,
+    language: str = "python",
 ) -> DocReport:
-    """Generate modding docs (Markdown + JSON) for the codebase at `root`."""
+    """Generate modding docs (Markdown + JSON) for the codebase at `root`.
+
+    `language` selects the front-end (python, typescript, javascript). Only
+    languages whose parser reports `validates=True` (Python) run runtime example
+    validation; others produce static docs with example status "generated".
+    """
     retries = max(_MIN_RETRIES, min(_MAX_RETRIES, max_example_retries))
 
-    codebase = parse_codebase(root)
+    parser = get_language_parser(language)
+    codebase = parser.parse_codebase(root)
     graph = build_graph(codebase)
     points = detect_extension_points(graph, min_score=min_score)
 
-    # Keep only points the validator confirmed; carry its method into the facts.
-    validations = validate_points(root, points, limit=limit)
-    confirmed = [(p, v) for p, v in zip(points, validations) if v.ok]
-
-    facts = [build_fact_block(codebase, p, v.method) for p, v in confirmed]
+    runtime_validated = getattr(parser, "validates", language == "python")
+    if runtime_validated:
+        # Keep only points the validator confirmed; carry its method into facts.
+        validations = validate_points(root, points, limit=limit)
+        confirmed = [(p, v) for p, v in zip(points, validations) if v.ok]
+        facts = [build_fact_block(codebase, p, v.method) for p, v in confirmed]
+    else:
+        # No in-process execution for this language: document all detected points
+        # statically (the LLM example is generated but not run).
+        chosen = points[:limit] if limit is not None else points
+        facts = [build_fact_block(codebase, p, "static") for p in chosen]
 
     overview = provider.generate(
         SYSTEM,
@@ -191,17 +209,22 @@ def generate_docs(
         ),
     )
 
+    ext = _example_ext(language)
     generated: list[GeneratedPoint] = []
     for fb in facts:
         guide = provider.generate(SYSTEM, guide_prompt(fb))
-        code, status = _make_example(provider, root, fb, retries, validate_examples)
+        if runtime_validated:
+            code, status = _make_example(provider, root, fb, retries, validate_examples)
+        else:
+            code = _extract_code(provider.generate(SYSTEM, example_prompt(fb)))
+            status = "generated"  # written by the LLM, not executed
         generated.append(
             GeneratedPoint(
                 fact=fb,
                 guide=guide,
                 example_code=code,
                 example_status=status,
-                example_path=f"examples/{_example_filename(fb.point_id)}",
+                example_path=f"examples/{_example_filename(fb.point_id, ext)}",
             )
         )
 
@@ -248,9 +271,7 @@ def _render_index(overview: str, generated: list[GeneratedPoint]) -> str:
         "| --- | --- | --- | --- |",
     ]
     for gp in generated:
-        badge = {"verified": "verified", "compiled": "compiled"}.get(
-            gp.example_status, "UNVERIFIED"
-        )
+        badge = "UNVERIFIED" if gp.example_status == "unverified" else gp.example_status
         lines.append(
             f"| `{gp.fact.point_id}` | {gp.fact.category} | "
             f"{gp.fact.module}:{gp.fact.lineno} | {badge} |"
@@ -277,5 +298,6 @@ def _render_guide(generated: list[GeneratedPoint]) -> str:
         if gp.example_status == "unverified":
             lines.append("> WARNING: this example could not be validated automatically.")
             lines.append("")
-        lines += ["```python", gp.example_code.strip(), "```", ""]
+        fence = "python" if gp.example_path.endswith(".py") else "typescript"
+        lines += [f"```{fence}", gp.example_code.strip(), "```", ""]
     return "\n".join(lines) + "\n"

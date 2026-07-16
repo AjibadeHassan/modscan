@@ -29,6 +29,7 @@ from modscan.parser import parse_codebase as _parse_python
 class PythonLanguageParser:
     name = "python"
     extensions = (".py",)
+    validates = True  # examples can be imported & executed in-process
 
     def parse_codebase(self, root: str) -> Codebase:
         return _parse_python(root)

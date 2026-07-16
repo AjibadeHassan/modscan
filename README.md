@@ -124,6 +124,7 @@ Common flags:
 ```bash
 modscan ./proj --provider openai --model gpt-x --base-url http://localhost:11434/v1
 modscan ./proj --min-score 0.6 --limit 20 --retries 5
+modscan ./proj --language typescript     # scan a TS/JS codebase (static docs)
 modscan ./proj --no-validate-examples   # skip importing/executing target code
 ```
 
