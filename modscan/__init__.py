@@ -38,6 +38,7 @@ from modscan.languages import (
     get_language_parser,
     register_language,
 )
+from modscan.config_scan import ConfigPoint, find_config_points, render_config_markdown
 
 __all__ = [
     "Codebase",
@@ -78,4 +79,7 @@ __all__ = [
     "available_languages",
     "get_language_parser",
     "register_language",
+    "ConfigPoint",
+    "find_config_points",
+    "render_config_markdown",
 ]

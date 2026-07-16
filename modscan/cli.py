@@ -27,6 +27,7 @@ import sys
 
 import json
 
+from modscan.config_scan import find_config_points, render_config_markdown
 from modscan.diff import diff_manifests, render_diff_markdown
 from modscan.docgen import generate_docs
 from modscan.providers import CachingProvider, Provider, get_provider
@@ -152,6 +153,21 @@ def _main_diff(argv: list[str]) -> int:
     return 1 if diff.breaking else 0
 
 
+def _main_config(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="modscan config",
+        description="List config / data-driven extension surfaces (manifest "
+        "files and drop-in directories). No LLM.",
+    )
+    parser.add_argument("root", help="path to the codebase to scan")
+    args = parser.parse_args(argv)
+    if not os.path.isdir(args.root):
+        print(f"error: not a directory: {args.root}", file=sys.stderr)
+        return 2
+    print(render_config_markdown(find_config_points(args.root)))
+    return 0
+
+
 def run(args: argparse.Namespace, provider: Provider) -> int:
     """Run the pipeline with an already-constructed provider. Returns exit code."""
     report = generate_docs(
@@ -182,6 +198,8 @@ def main(argv: list[str] | None = None) -> int:
         return _main_scaffold(argv[1:])
     if argv and argv[0] == "diff":
         return _main_diff(argv[1:])
+    if argv and argv[0] == "config":
+        return _main_config(argv[1:])
 
     args = build_parser().parse_args(argv)
 
