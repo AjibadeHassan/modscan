@@ -47,6 +47,7 @@ from modscan.manifest import build_manifest, write_manifest
 from modscan.parser import parse_codebase
 from modscan.prompts import SYSTEM, architecture_prompt, example_prompt, guide_prompt
 from modscan.providers.base import Provider
+from modscan.sandbox import validate_in_sandbox
 from modscan.validator import validate_points
 
 # Example-validation retry bounds (locked in the Task 4 plan).
@@ -139,8 +140,14 @@ def _exec_module(root: str, code: str) -> bool:
     return True
 
 
-def _verify_example(root: str, fb: FactBlock, code: str, validate: bool) -> str:
-    """Return an example status: verified | executed | compiled | invalid."""
+def _verify_example(
+    root: str, fb: FactBlock, code: str, validate: bool, sandbox: bool
+) -> str:
+    """Return an example status: verified | executed | compiled | invalid.
+
+    When `sandbox` is set, example execution runs in an isolated child process
+    (see sandbox.py) instead of the host interpreter.
+    """
     try:
         compile(code, "<modscan-example>", "exec")
     except SyntaxError:
@@ -148,20 +155,33 @@ def _verify_example(root: str, fb: FactBlock, code: str, validate: bool) -> str:
     if not validate:
         return "compiled"
     if fb.kind in ("class", "abstract_class"):
-        return "verified" if _exec_and_instantiate(root, fb, code) else "invalid"
+        if sandbox:
+            ok = validate_in_sandbox(root, fb.module, fb.symbol, code, fb.kind)
+        else:
+            ok = _exec_and_instantiate(root, fb, code)
+        return "verified" if ok else "invalid"
     # hook/registration/api: no subclass to instantiate, but we can still load
     # the example to catch bad imports and module-level errors.
-    return "executed" if _exec_module(root, code) else "invalid"
+    if sandbox:
+        ok = validate_in_sandbox(root, fb.module, fb.symbol, code, fb.kind)
+    else:
+        ok = _exec_module(root, code)
+    return "executed" if ok else "invalid"
 
 
 def _make_example(
-    provider: Provider, root: str, fb: FactBlock, retries: int, validate: bool
+    provider: Provider,
+    root: str,
+    fb: FactBlock,
+    retries: int,
+    validate: bool,
+    sandbox: bool,
 ) -> tuple[str, str]:
     """Generate and validate an example plugin, retrying up to `retries` times."""
     code = ""
     for _ in range(retries):
         code = _extract_code(provider.generate(SYSTEM, example_prompt(fb)))
-        status = _verify_example(root, fb, code, validate)
+        status = _verify_example(root, fb, code, validate, sandbox)
         if status in _OK_STATUSES:
             return code, status
     return code, "unverified"
@@ -186,8 +206,13 @@ def generate_docs(
     limit: int | None = None,
     max_example_retries: int = _DEFAULT_RETRIES,
     validate_examples: bool = True,
+    sandbox: bool = False,
 ) -> DocReport:
-    """Generate modding docs (Markdown + JSON) for the codebase at `root`."""
+    """Generate modding docs (Markdown + JSON) for the codebase at `root`.
+
+    Set `sandbox=True` to validate generated examples in an isolated child
+    process instead of the host interpreter (see sandbox.py).
+    """
     retries = max(_MIN_RETRIES, min(_MAX_RETRIES, max_example_retries))
 
     codebase = parse_codebase(root)
@@ -210,7 +235,9 @@ def generate_docs(
     generated: list[GeneratedPoint] = []
     for fb in facts:
         guide = provider.generate(SYSTEM, guide_prompt(fb))
-        code, status = _make_example(provider, root, fb, retries, validate_examples)
+        code, status = _make_example(
+            provider, root, fb, retries, validate_examples, sandbox
+        )
         generated.append(
             GeneratedPoint(
                 fact=fb,

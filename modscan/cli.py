@@ -61,6 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="skip executing generated examples (no import/exec of target code)",
     )
+    parser.add_argument(
+        "--sandbox",
+        action="store_true",
+        help="validate examples in an isolated subprocess (safer for less-trusted code)",
+    )
     return parser
 
 
@@ -104,6 +109,7 @@ def run(args: argparse.Namespace, provider: Provider) -> int:
         limit=args.limit,
         max_example_retries=args.retries,
         validate_examples=not args.no_validate_examples,
+        sandbox=args.sandbox,
     )
     verified = report.verified_count
     total = len(report.points)
