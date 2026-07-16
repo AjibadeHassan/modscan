@@ -31,6 +31,7 @@ from modscan.providers import DEFAULT_MODEL, FakeProvider, Provider, get_provide
 from modscan.docgen import DocReport, GeneratedPoint, generate_docs
 from modscan.scaffold import render_scaffold, scaffold, scaffold_all
 from modscan.sandbox import validate_in_sandbox
+from modscan.diff import ManifestDiff, PointChange, diff_manifests, render_diff_markdown
 
 __all__ = [
     "Codebase",
@@ -63,4 +64,8 @@ __all__ = [
     "scaffold_all",
     "render_scaffold",
     "validate_in_sandbox",
+    "ManifestDiff",
+    "PointChange",
+    "diff_manifests",
+    "render_diff_markdown",
 ]
