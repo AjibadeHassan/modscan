@@ -141,6 +141,52 @@ def test_docgen_unverified_retries() -> None:
     print("OK: docgen unverified-retry self-check passed")
 
 
+PROTO_SRC = (
+    "from typing import Protocol, runtime_checkable\n"
+    "\n"
+    "__all__ = ['StorageBackend']\n"
+    "\n"
+    "@runtime_checkable\n"
+    "class StorageBackend(Protocol):\n"
+    "    model: str\n"
+    "    def save(self, x) -> None: ...\n"
+)
+
+
+def test_docgen_protocol_seam_does_not_crash() -> None:
+    """Regression: issubclass() against a Protocol base must not crash the run."""
+    pkg = "dgproto"
+    with tempfile.TemporaryDirectory() as root:
+        d = os.path.join(root, pkg)
+        os.makedirs(d)
+        open(os.path.join(d, "__init__.py"), "w").close()
+        with open(os.path.join(d, "api.py"), "w", encoding="utf-8") as fh:
+            fh.write(PROTO_SRC)
+        try:
+            example = (
+                f"```python\nfrom {pkg}.api import StorageBackend\n"
+                "class MyStore(StorageBackend):\n"
+                "    model = 'm'\n"
+                "    def save(self, x):\n"
+                "        return None\n```"
+            )
+            provider = FakeProvider(
+                lambda s, p: example if "EXAMPLE plugin" in p else "prose"
+            )
+            out = os.path.join(root, "modding-docs")
+            # must complete without raising the Protocol issubclass TypeError
+            report = generate_docs(root, provider, out, min_score=0.5)
+            assert os.path.isfile(os.path.join(out, "extension-points.json"))
+            # the point resolved to a status (not a crash); Protocol can't validate
+            statuses = {p.example_status for p in report.points}
+            assert statuses  # non-empty, run finished
+        finally:
+            _cleanup(pkg)
+
+    print("OK: docgen protocol-seam regression passed")
+
+
 if __name__ == "__main__":
     test_docgen_verified()
     test_docgen_unverified_retries()
+    test_docgen_protocol_seam_does_not_crash()

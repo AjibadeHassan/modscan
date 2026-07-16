@@ -89,9 +89,11 @@ def _validate_subclass(root: str, point: ExtensionPoint) -> ValidationResult:
     abstract = getattr(cls, "__abstractmethods__", frozenset())
     # Stub out every abstract method so the subclass is concrete.
     namespace = {m: (lambda self, *a, **k: None) for m in abstract}
-    probe = type(f"_ModScanProbe_{cls.__name__}", (cls,), namespace)
 
     try:
+        # Subclass creation itself can raise (e.g. typing.Protocol with data
+        # members rejects issubclass), so it must be inside the guard too.
+        probe = type(f"_ModScanProbe_{cls.__name__}", (cls,), namespace)
         probe()  # raises TypeError if still abstract, or if __init__ needs args
     except Exception as exc:  # noqa: BLE001
         return ValidationResult(

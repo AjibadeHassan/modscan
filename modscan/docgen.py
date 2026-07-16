@@ -115,13 +115,15 @@ def _exec_and_instantiate(root: str, fb: FactBlock, code: str) -> bool:
         return False
     if not isinstance(base, type):
         return False
-    for value in namespace.values():
-        if isinstance(value, type) and value is not base and issubclass(value, base):
-            try:
+    try:
+        for value in namespace.values():
+            # issubclass can raise on some bases (e.g. a typing.Protocol with
+            # data members), so guard the whole search.
+            if isinstance(value, type) and value is not base and issubclass(value, base):
                 value()
-            except Exception:  # noqa: BLE001
-                return False
-            return True
+                return True
+    except Exception:  # noqa: BLE001 — any failure means the example didn't load
+        return False
     return False
 
 

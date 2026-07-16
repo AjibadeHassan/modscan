@@ -72,6 +72,45 @@ def _cleanup_imported() -> None:
             del sys.modules[name]
 
 
+# Regression: a runtime_checkable Protocol with a data member makes issubclass
+# raise. The validator must handle that gracefully, not crash the run.
+PROTO_FIXTURE = {
+    "vproto/__init__.py": "",
+    "vproto/api.py": (
+        "from typing import Protocol, runtime_checkable\n"
+        "\n"
+        "__all__ = ['RenderBackend']\n"
+        "\n"
+        "@runtime_checkable\n"
+        "class RenderBackend(Protocol):\n"
+        "    model: str\n"
+        "    def render(self, scene) -> str: ...\n"
+    ),
+}
+
+
+def test_validator_protocol_is_graceful() -> None:
+    with tempfile.TemporaryDirectory() as root:
+        for rel, content in PROTO_FIXTURE.items():
+            path = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(content)
+        try:
+            cb = parse_codebase(root)
+            points = detect_extension_points(build_graph(cb))
+            backend = next(p for p in points if p.seam.name == "RenderBackend")
+            # the point is that this does not raise on a Protocol seam
+            res = validate_point(root, backend)
+            assert isinstance(res.ok, bool)
+        finally:
+            for name in list(sys.modules):
+                if name == "vproto" or name.startswith("vproto."):
+                    del sys.modules[name]
+
+    print("OK: validator protocol-graceful self-check passed")
+
+
 def test_validator() -> None:
     with tempfile.TemporaryDirectory() as root:
         _write(root)
@@ -114,3 +153,4 @@ def test_validator() -> None:
 
 if __name__ == "__main__":
     test_validator()
+    test_validator_protocol_is_graceful()
